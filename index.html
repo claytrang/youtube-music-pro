@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0a0a">
+<title>YouTube Music Pro</title>
+<link rel="manifest" href="manifest.json">
+<script src="https://www.youtube.com/iframe_api"></script>
+<style>
+:root{--bg:#0a0a0a;--surface:#141414;--surface2:#1e1e1e;--border:#2a2a2a;--text:#f5f5f5;--text2:#888;--accent:#ff0033;--accent2:#ff3366;--green:#00d084;--yellow:#ffb800}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:120px;overflow-x:hidden}
+
+.header{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+.logo{font-size:18px;font-weight:900;color:var(--accent);display:flex;align-items:center;gap:8px;letter-spacing:-0.5px}
+.logo::before{content:"▶";font-size:14px;background:var(--accent);color:#fff;width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center}
+.header-actions{display:flex;gap:8px}
+.icon-btn{width:36px;height:36px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;transition:.2s}
+.icon-btn:active{transform:scale(.9);background:var(--border)}
+
+.search-hero{padding:16px;background:linear-gradient(180deg,rgba(255,0,51,0.08) 0%,transparent 100%)}
+.search-box{position:relative;display:flex;gap:10px;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:4px;padding-left:16px;transition:.2s}
+.search-box:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,0,51,0.15)}
+.search-box input{flex:1;background:transparent;border:none;color:var(--text);font-size:15px;padding:12px 0;outline:none}
+.search-box input::placeholder{color:var(--text2)}
+.search-btn{background:var(--accent);color:#fff;border:none;border-radius:12px;padding:10px 20px;font-weight:700;font-size:14px;cursor:pointer;transition:.2s;white-space:nowrap}
+.search-btn:active{transform:scale(.95)}
+.search-btn:disabled{opacity:.5;cursor:not-allowed}
+
+.status-bar{display:flex;align-items:center;gap:8px;padding:8px 16px;font-size:12px;color:var(--text2);min-height:36px}
+.status-bar .dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+.status-bar .dot.warn{background:var(--yellow)}
+.status-bar .dot.err{background:var(--accent);animation:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* API Key Banner */
+.api-banner{display:none;background:linear-gradient(90deg,rgba(255,0,51,0.15),rgba(255,0,51,0.05));border:1px solid rgba(255,0,51,0.3);border-radius:12px;padding:12px 16px;margin:0 16px 12px;font-size:13px;color:var(--text2)}
+.api-banner.show{display:block}
+.api-banner b{color:var(--accent)}
+.api-banner input{width:100%;margin-top:8px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px;outline:none}
+.api-banner input:focus{border-color:var(--accent)}
+.api-banner .row{display:flex;gap:8px;margin-top:8px}
+.api-banner button{flex:1;padding:8px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-weight:600;font-size:12px;cursor:pointer}
+.api-banner button.secondary{background:var(--surface2);color:var(--text)}
+
+/* Player */
+.player-section{padding:0 16px}
+.player-wrapper{position:relative;width:100%;padding-bottom:56.25%;background:#000;border-radius:16px;overflow:hidden;margin-bottom:12px;border:1px solid var(--border)}
+#player{position:absolute;top:0;left:0;width:100%;height:100%}
+.player-error{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(0,0,0,0.92);z-index:10;padding:20px;text-align:center}
+.player-error.hidden{display:none}
+.player-error p{color:var(--text2);font-size:13px}
+.retry-btn{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 24px;font-weight:600;cursor:pointer;font-size:14px}
+
+.now-playing{background:var(--surface);border-radius:16px;padding:16px;margin-bottom:12px;border:1px solid var(--border)}
+.np-title{font-size:16px;font-weight:700;margin-bottom:4px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.np-channel{font-size:13px;color:var(--text2);display:flex;align-items:center;gap:6px}
+.np-channel::before{content:"";display:inline-block;width:16px;height:16px;background:var(--accent);border-radius:50%;flex-shrink:0}
+
+.progress-wrap{padding:0 16px;margin-bottom:12px}
+.progress-row{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--text2);font-variant-numeric:tabular-nums}
+.progress-track{flex:1;height:4px;background:var(--border);border-radius:2px;position:relative;cursor:pointer;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;width:0%;transition:width .3s;position:relative}
+.progress-fill::after{content:"";position:absolute;right:-6px;top:50%;transform:translateY(-50%);width:12px;height:12px;background:#fff;border-radius:50%;opacity:0;transition:.2s}
+.progress-track:active .progress-fill::after,.progress-track:hover .progress-fill::after{opacity:1}
+
+.controls{display:flex;align-items:center;justify-content:center;gap:16px;padding:8px 16px 16px}
+.ctrl-btn{background:none;border:none;color:var(--text);font-size:22px;cursor:pointer;padding:8px;transition:.2s;display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%}
+.ctrl-btn:active{transform:scale(.85);background:rgba(255,255,255,0.05)}
+.ctrl-btn.active{color:var(--accent)}
+.ctrl-play{width:64px;height:64px;background:var(--accent);color:#fff;border-radius:50%;font-size:28px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(255,0,51,0.3)}
+.ctrl-play:active{transform:scale(.9);box-shadow:0 4px 12px rgba(255,0,51,0.2)}
+
+.extra-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:0 16px 16px}
+.chip{padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;transition:.2s}
+.chip:active{transform:scale(.95)}
+.chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+.section-title{font-size:14px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;padding:16px 16px 8px;display:flex;align-items:center;justify-content:space-between}
+.queue-count{font-size:12px;color:var(--accent);background:rgba(255,0,51,0.1);padding:2px 10px;border-radius:10px}
+
+.video-list{display:flex;flex-direction:column;gap:6px;padding:0 16px}
+.video-item{display:flex;align-items:center;gap:12px;padding:10px;background:var(--surface);border-radius:12px;cursor:pointer;transition:.2s;border:1px solid transparent;position:relative;overflow:hidden}
+.video-item:active{transform:scale(.99);background:var(--surface2)}
+.video-item.playing{border-color:var(--accent);background:rgba(255,0,51,0.05)}
+.video-item.playing::before{content:"▶";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent)}
+.video-thumb{width:100px;height:56px;border-radius:8px;background:var(--surface2);flex-shrink:0;object-fit:cover}
+.video-info{flex:1;min-width:0}
+.video-title{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.video-meta{font-size:11px;color:var(--text2);margin-top:2px;display:flex;align-items:center;gap:6px}
+.video-meta .dur{background:var(--border);padding:1px 6px;border-radius:4px;font-size:10px}
+.video-remove{width:32px;height:32px;border-radius:8px;background:transparent;border:none;color:var(--text2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.video-remove:active{background:rgba(255,0,51,0.1);color:var(--accent)}
+
+.empty-state{text-align:center;padding:40px 20px;color:var(--text2)}
+.empty-state .big{font-size:48px;margin-bottom:12px;opacity:.5}
+.empty-state p{font-size:14px;line-height:1.6}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(5px)}
+.modal-overlay.active{display:flex}
+.modal{background:var(--surface);width:100%;max-width:480px;border-radius:24px 24px 0 0;padding:20px;max-height:70vh;overflow-y:auto;border-top:1px solid var(--border);animation:slideUp .3s}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal h3{font-size:18px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.modal-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--border)}
+.modal-row:last-child{border-bottom:none}
+.toggle{width:48px;height:26px;background:var(--border);border-radius:13px;position:relative;cursor:pointer;transition:.2s}
+.toggle::after{content:"";position:absolute;width:22px;height:22px;background:#fff;border-radius:50%;top:2px;left:2px;transition:.2s}
+.toggle.on{background:var(--accent)}
+.toggle.on::after{left:24px}
+
+.toast{position:fixed;top:60px;left:50%;transform:translateX(-50%) translateY(-60px);background:var(--surface2);color:var(--text);padding:12px 24px;border-radius:24px;border:1px solid var(--border);z-index:300;opacity:0;transition:.3s;pointer-events:none;font-size:13px;white-space:nowrap;box-shadow:0 8px 32px rgba(0,0,0,0.4)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.error{border-color:rgba(255,0,51,0.5);color:#ff6688}
+
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:rgba(10,10,10,0.98);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:6px 0 calc(6px + env(safe-area-inset-bottom));z-index:100}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 16px;border:none;background:none;color:var(--text2);font-size:10px;cursor:pointer;transition:.2s}
+.nav-item.active{color:var(--accent)}
+
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+@media(min-width:768px){body{max-width:480px;margin:0 auto;border-left:1px solid var(--border);border-right:1px solid var(--border)}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">YouTube Pro</div>
+  <div class="header-actions">
+    <button class="icon-btn" onclick="toggleApiBanner()" title="ตั้งค่า API">🔑</button>
+    <button class="icon-btn" onclick="openSettings()" title="ตั้งค่า">⚙️</button>
+  </div>
+</div>
+
+<!-- SEARCH -->
+<div class="search-hero">
+  <div class="search-box">
+    <input type="text" id="search-input" placeholder="พิมพ์ชื่อเพลง ศิลปิน หรือคำค้นหา..." onkeydown="if(event.key==='Enter')startSearch()">
+    <button class="search-btn" id="search-btn" onclick="startSearch()">🔍 ค้นหา</button>
+  </div>
+</div>
+
+<!-- API KEY BANNER -->
+<div class="api-banner" id="api-banner">
+  <b>🔑 YouTube Data API Key</b> (ใส่เพื่อความเสถียร)<br>
+  <span style="font-size:12px">หากค้นหาไม่ได้บ่อย ให้ไปสร้างที่ <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:var(--accent)">Google Cloud Console</a> → เปิด YouTube Data API v3 → สร้าง API Key</span>
+  <input type="text" id="api-key-input" placeholder="วาง YouTube API Key ที่นี่...">
+  <div class="row">
+    <button onclick="saveApiKey()">💾 บันทึก</button>
+    <button class="secondary" onclick="clearApiKey()">ลบ</button>
+  </div>
+</div>
+
+<div class="status-bar" id="status-bar">
+  <span class="dot" id="status-dot"></span>
+  <span id="status-text">พร้อมใช้งาน — พิมพ์ชื่อเพลงแล้วกดค้นหา</span>
+</div>
+
+<!-- PLAYER -->
+<div class="player-section">
+  <div class="player-wrapper">
+    <div id="player"></div>
+    <div class="player-error hidden" id="player-error">
+      <p>⚠️ ไม่สามารถเล่นวิดีโอนี้ได้</p>
+      <button class="retry-btn" onclick="skipError()">⏭ ข้ามไปเพลงถัดไป</button>
+    </div>
+  </div>
+
+  <div class="now-playing">
+    <div class="np-title" id="np-title">ยังไม่มีเพลงที่เล่น</div>
+    <div class="np-channel" id="np-channel">พิมพ์ชื่อเพลงด้านบนแล้วกดค้นหา</div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-row">
+      <span id="cur-time">0:00</span>
+      <div class="progress-track" onclick="seek(event)">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+      <span id="dur-time">0:00</span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="ctrl-btn" id="shuffle-btn" onclick="toggleShuffle()" title="สุ่ม">🔀</button>
+    <button class="ctrl-btn" onclick="prevVideo()" title="ก่อนหน้า">⏮</button>
+    <button class="ctrl-btn ctrl-play" id="play-btn" onclick="togglePlay()" title="เล่น/หยุด">▶</button>
+    <button class="ctrl-btn" onclick="nextVideo()" title="ถัดไป">⏭</button>
+    <button class="ctrl-btn" id="repeat-btn" onclick="toggleRepeat()" title="ซ้ำ">🔁</button>
+  </div>
+
+  <div class="extra-row">
+    <button class="chip" onclick="setSpeed(0.5)">0.5x</button>
+    <button class="chip on" onclick="setSpeed(1)">1x</button>
+    <button class="chip" onclick="setSpeed(1.25)">1.25x</button>
+    <button class="chip" onclick="setSpeed(1.5)">1.5x</button>
+    <button class="chip" onclick="setSpeed(2)">2x</button>
+    <button class="chip" id="sleep-chip" onclick="openSleepModal()">⏲️ Sleep</button>
+  </div>
+</div>
+
+<!-- QUEUE -->
+<div class="section-title">
+  <span>📋 คิวเพลงถัดไป <span class="queue-count" id="queue-count">0</span></span>
+  <button class="icon-btn" onclick="clearQueue()" title="ล้างคิว" style="font-size:14px">🗑</button>
+</div>
+<div class="video-list" id="queue-list">
+  <div class="empty-state">
+    <div class="big">🎵</div>
+    <p>คิวว่างเปล่า<br>พิมพ์ชื่อเพลงด้านบนแล้วกดค้นหา<br>ระบบจะเพิ่มเพลงที่เกี่ยวข้องเข้าคิวอัตโนมัติ</p>
+  </div>
+</div>
+
+<!-- HISTORY -->
+<div class="section-title" style="margin-top:8px">
+  <span>🕐 เล่นแล้ว <span class="queue-count" id="history-count">0</span></span>
+</div>
+<div class="video-list" id="history-list" style="opacity:.6"></div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settings-modal" onclick="if(event.target===this)closeSettings()">
+  <div class="modal">
+    <h3>⚙️ ตั้งค่า</h3>
+    <div class="modal-row">
+      <span>🛡️ ป้องกันหยุดเล่นกลางคัน</span>
+      <div class="toggle on" id="tog-antipause" onclick="toggleSetting('antipause')"></div>
+    </div>
+    <div class="modal-row">
+      <span>🔁 เล่นซ้ำเพลย์ลิสต์</span>
+      <div class="toggle" id="tog-loop" onclick="toggleSetting('loop')"></div>
+    </div>
+    <div class="modal-row">
+      <span>🔀 สุ่มอัตโนมัติเมื่อคิวหมด</span>
+      <div class="toggle on" id="tog-autoshuffle" onclick="toggleSetting('autoshuffle')"></div>
+    </div>
+    <div class="modal-row">
+      <span>📺 แสดง Mini Player</span>
+      <div class="toggle" id="tog-mini" onclick="toggleSetting('mini')"></div>
+    </div>
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+      <button class="search-btn" style="width:100%" onclick="closeSettings()">ปิด</button>
+    </div>
+  </div>
+</div>
+
+<!-- SLEEP MODAL -->
+<div class="modal-overlay" id="sleep-modal" onclick="if(event.target===this)closeSleepModal()">
+  <div class="modal">
+    <h3>⏲️ ตั้งเวลาหยุดเล่น</h3>
+    <div style="text-align:center;padding:20px;font-size:42px;font-weight:200;color:var(--accent);font-variant-numeric:tabular-nums" id="sleep-display">--:--</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">
+      <button class="chip" style="padding:10px" onclick="setSleepTimer(15)">15 นาที</button>
+      <button class="chip" style="padding:10px" onclick="setSleepTimer(30)">30 นาที</button>
+      <button class="chip" style="padding:10px" onclick="setSleepTimer(45)">45 นาที</button>
+      <button class="chip" style="padding:10px" onclick="setSleepTimer(60)">1 ชม.</button>
+      <button class="chip" style="padding:10px" onclick="setSleepTimer(90)">1.5 ชม.</button>
+      <button class="chip on" style="padding:10px" onclick="setSleepTimer(0)">ปิด</button>
+    </div>
+    <button class="search-btn" style="width:100%" onclick="closeSleepModal()">ตกลง</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== STATE =====================
+let player = null, isPlayerReady = false;
+let searchQuery = '', playQueue = [], playedHistory = [], playedIds = new Set();
+let currentIndex = -1, isShuffle = false, repeatMode = 0;
+let sleepTimer = null, sleepInterval = null, progressLoop = null, antiPauseLoop = null;
+let settings = JSON.parse(localStorage.getItem('ytpro_settings')) || { antipause:true, loop:false, autoshuffle:true, mini:false };
+let apiKey = localStorage.getItem('ytpro_apikey') || '';
+let nextPageToken = null;
+
+// Multiple API endpoints for fallback
+const API_INSTANCES = [
+  'https://pipedapi.kavin.rocks',
+  'https://api.piped.projectsegfault.com',
+  'https://pipedapi.adminforge.de',
+  'https://pipedapi.moomoo.me',
+  'https://pipedapi.leptons.xyz'
+];
+const YT_API_BASE = 'https://www.googleapis.com/youtube/v3';
+
+// ===================== YOUTUBE PLAYER =====================
+function onYouTubeIframeAPIReady() {
+  player = new YT.Player('player', {
+    height:'100%', width:'100%',
+    playerVars:{autoplay:1,controls:1,rel:0,modestbranding:1,playsinline:1,enablejsapi:1,iv_load_policy:3},
+    events:{onReady:onPlayerReady,onStateChange:onPlayerStateChange,onError:onPlayerError}
+  });
+}
+function onPlayerReady() {
+  isPlayerReady = true;
+  updateStatus('✅ พร้อมใช้งาน','ok');
+  if(settings.antipause) startAntiPause();
+  updateSettingsUI();
+  renderQueue(); renderHistory();
+  if(apiKey) document.getElementById('api-key-input').value = apiKey;
+}
+function onPlayerStateChange(e) {
+  const btn = document.getElementById('play-btn');
+  if(e.data===YT.PlayerState.PLAYING){btn.innerHTML='⏸';startProgressLoop();hidePlayerError();}
+  else if(e.data===YT.PlayerState.PAUSED){btn.innerHTML='▶';stopProgressLoop();}
+  else if(e.data===YT.PlayerState.ENDED){handleVideoEnd();}
+  else if(e.data===YT.PlayerState.BUFFERING){updateStatus('⏳ กำลังโหลด...','warn');}
+}
+function onPlayerError(e) {
+  console.error('YT Error:',e.data);
+  let msg='ไม่สามารถเล่นวิดีโอนี้ได้';
+  if(e.data===2) msg='รหัสวิดีโอไม่ถูกต้อง';
+  if(e.data===5) msg='วิดีโอนี้เล่นใน HTML5 ไม่ได้';
+  if(e.data===100) msg='วิดีโอถูกลบหรือเป็น Private';
+  if(e.data===101||e.data===150) msg='เจ้าของห้ามเล่นบนเว็บภายนอก';
+  showToast('❌ '+msg,true);
+  showPlayerError(msg);
+  setTimeout(()=>skipError(),3000);
+}
+function showPlayerError(msg){const el=document.getElementById('player-error');el.querySelector('p').textContent='⚠️ '+msg;el.classList.remove('hidden');}
+function hidePlayerError(){document.getElementById('player-error').classList.add('hidden');}
+function skipError(){hidePlayerError();nextVideo();}
+
+// ===================== SEARCH WITH FALLBACK =====================
+async function startSearch() {
+  const input = document.getElementById('search-input');
+  const query = input.value.trim();
+  if(!query) return;
+  searchQuery = query;
+  playQueue=[]; playedHistory=[]; playedIds.clear(); currentIndex=-1; nextPageToken=null;
+  updateStatus('🔍 กำลังค้นหา: '+query,'warn');
+  document.getElementById('search-btn').disabled=true;
+
+  try {
+    let results = [];
+    if(apiKey) {
+      results = await searchWithApiKey(query);
+    } else {
+      results = await searchWithFallback(query);
+    }
+    if(results.length>0) {
+      playQueue = results;
+      playVideo(0);
+      updateStatus('▶️ '+results[0].title.substring(0,40)+(results[0].title.length>40?'...':''),'ok');
+      setTimeout(()=>prefetchMore(),5000);
+    } else {
+      updateStatus('❌ ไม่พบผลลัพธ์ — ลองเปลี่ยนคำค้นหาหรือใส่ API Key','err');
+      showToast('ไม่พบเพลง ลองใส่ YouTube API Key ใน 🔑 ด้านบน',true);
+    }
+  } catch(err) {
+    console.error(err);
+    updateStatus('❌ ค้นหาล้มเหลว — ลองใส่ API Key หรือรีเฟรชหน้า','err');
+    showToast('ค้นหาล้มเหลว ลองใส่ API Key',true);
+  } finally {
+    document.getElementById('search-btn').disabled=false;
+  }
+}
+
+// Method 1: YouTube Data API v3 (most reliable, requires API key)
+async function searchWithApiKey(query) {
+  const url = `${YT_API_BASE}/search?part=snippet&maxResults=20&q=${encodeURIComponent(query)}&type=video&key=${apiKey}`;
+  const res = await fetch(url);
+  if(!res.ok) throw new Error('API Key invalid or quota exceeded');
+  const data = await res.json();
+  if(!data.items) return [];
+  return data.items.map(item=>({
+    id: item.id.videoId,
+    title: item.snippet.title,
+    channel: item.snippet.channelTitle,
+    thumb: item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default?.url,
+    duration: '',
+    url: 'https://youtube.com/watch?v='+item.id.videoId
+  })).filter(v=>v.id);
+}
+
+// Method 2: Try multiple Piped instances with fallback
+async function searchWithFallback(query) {
+  let lastErr = null;
+  for(const base of API_INSTANCES) {
+    try {
+      updateStatus('🔌 ลองเชื่อมต่อ: '+base.replace('https://',''),'warn');
+      const url = `${base}/search?q=${encodeURIComponent(query)}&filter=videos`;
+      const res = await fetch(url, {mode:'cors',headers:{'Accept':'application/json'}});
+      if(!res.ok) continue;
+      const data = await res.json();
+      if(!data.items || data.items.length===0) continue;
+      updateStatus('✅ เชื่อมต่อสำเร็จ: '+base.replace('https://',''),'ok');
+      return data.items.map(item=>{
+        const id = extractVideoId(item.url);
+        return {id:id,title:item.title,channel:item.uploaderName,thumb:item.thumbnail||`https://img.youtube.com/vi/${id}/mqdefault.jpg`,duration:item.duration||'',url:item.url};
+      }).filter(v=>v.id);
+    } catch(e) {
+      lastErr = e;
+      console.log(base+' failed:',e.message);
+      continue;
+    }
+  }
+  throw lastErr || new Error('All instances failed');
+}
+
+async function prefetchMore() {
+  if(!searchQuery || playQueue.length>15) return;
+  updateStatus('📥 กำลังโหลดเพลงเพิ่ม...','warn');
+  try {
+    let more = [];
+    if(apiKey) {
+      const url = `${YT_API_BASE}/search?part=snippet&maxResults=20&pageToken=${nextPageToken||''}&q=${encodeURIComponent(searchQuery)}&type=video&key=${apiKey}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      nextPageToken = data.nextPageToken;
+      more = data.items.map(item=>({id:item.id.videoId,title:item.snippet.title,channel:item.snippet.channelTitle,thumb:item.snippet.thumbnails.medium?.url,url:'https://youtube.com/watch?v='+item.id.videoId}));
+    } else {
+      const variants = [searchQuery+' music', searchQuery+' song', searchQuery+' live'];
+      const q = variants[Math.floor(Math.random()*variants.length)];
+      more = await searchWithFallback(q);
+    }
+    const newItems = more.filter(v=>v.id && !playedIds.has(v.id));
+    playQueue.push(...newItems);
+    renderQueue();
+    updateStatus('✅ โหลดเพลงเพิ่มแล้ว '+playQueue.length+' เพลงในคิว','ok');
+  } catch(e) { console.log('Prefetch failed',e); }
+}
+
+function extractVideoId(url) {
+  if(!url) return null;
+  const m = url.match(/(?:v=|\/)([a-zA-Z0-9_-]{11})/);
+  return m?m[1]:(url.length===11?url:null);
+}
+
+// ===================== PLAYBACK =====================
+function playVideo(index) {
+  if(index<0 || index>=playQueue.length) {
+    if(settings.autoshuffle && searchQuery) { prefetchMore().then(()=>{if(playQueue.length>0)playVideo(0);}); }
+    return;
+  }
+  currentIndex=index;
+  const video=playQueue[index];
+  if(!isPlayerReady||!player||!player.loadVideoById) {
+    showToast('⏳ กำลังโหลดผู้เล่น...');
+    setTimeout(()=>playVideo(index),1000); return;
+  }
+  try {
+    player.loadVideoById(video.id);
+    playedIds.add(video.id);
+    playedHistory.unshift(video);
+    if(playedHistory.length>50) playedHistory.pop();
+    document.getElementById('np-title').textContent=video.title;
+    document.getElementById('np-channel').textContent=(video.channel||'YouTube')+' • เพลงที่ '+(index+1)+' ในคิว';
+    updateStatus('▶️ '+video.title.substring(0,40)+(video.title.length>40?'...':''),'ok');
+    renderQueue(); renderHistory();
+    if(playQueue.length-index<5) prefetchMore();
+  } catch(err) {
+    showToast('❌ ไม่สามารถเล่นได้ ข้ามไปเพลงถัดไป',true);
+    setTimeout(()=>nextVideo(),1500);
+  }
+}
+function togglePlay() {
+  if(!isPlayerReady||!player) return;
+  try { const s=player.getPlayerState(); s===YT.PlayerState.PLAYING?player.pauseVideo():player.playVideo(); } catch(e){}
+}
+function nextVideo() {
+  if(isShuffle) {
+    const remaining=playQueue.map((v,i)=>i).filter(i=>i!==currentIndex && !playedIds.has(playQueue[i]?.id));
+    if(remaining.length>0){playVideo(remaining[Math.floor(Math.random()*remaining.length)]);return;}
+  }
+  const nextIdx=currentIndex+1;
+  if(nextIdx<playQueue.length){playVideo(nextIdx);}
+  else if(settings.loop&&playQueue.length>0){playedIds.clear();playVideo(0);}
+  else if(settings.autoshuffle){updateStatus('📥 กำลังหาเพลงใหม่...','warn');prefetchMore().then(()=>{if(playQueue.length>currentIndex+1)playVideo(currentIndex+1);});}
+  else {showToast('🏁 จบคิวเพลงแล้ว');updateStatus('✅ จบการเล่น','ok');}
+}
+function prevVideo() {
+  if(playedHistory.length>1){const prev=playedHistory[1];const idx=playQueue.findIndex(v=>v.id===prev.id);if(idx>=0){playVideo(idx);return;}}
+  if(currentIndex>0)playVideo(currentIndex-1);
+}
+function handleVideoEnd() {
+  if(repeatMode===1){try{player.seekTo(0);player.playVideo();}catch(e){}}
+  else{nextVideo();}
+}
+function setSpeed(rate) {
+  if(!player||!player.setPlaybackRate)return;
+  player.setPlaybackRate(rate);
+  document.querySelectorAll('.extra-row .chip').forEach(c=>c.classList.remove('on'));
+  event.target.classList.add('on');
+  showToast('⚡ ความเร็ว: '+rate+'x');
+}
+function toggleShuffle() {
+  isShuffle=!isShuffle;
+  const btn=document.getElementById('shuffle-btn');
+  btn.classList.toggle('active',isShuffle); btn.style.opacity=isShuffle?'1':'0.4';
+  showToast(isShuffle?'🔀 สุ่ม: เปิด':'🔀 สุ่ม: ปิด');
+}
+function toggleRepeat() {
+  repeatMode=(repeatMode+1)%3;
+  const emojis=['🔁','🔂','🔁'], labels=['ซ้ำ: ปิด','ซ้ำ: เพลงเดียว','ซ้ำ: ทั้งหมด'];
+  const btn=document.getElementById('repeat-btn');
+  btn.textContent=emojis[repeatMode]; btn.style.opacity=repeatMode===0?'0.4':'1';
+  btn.classList.toggle('active',repeatMode>0);
+  showToast(labels[repeatMode]);
+}
+
+// ===================== PROGRESS =====================
+function startProgressLoop() {
+  stopProgressLoop();
+  progressLoop=setInterval(()=>{
+    if(!player||!player.getCurrentTime)return;
+    try{const cur=player.getCurrentTime()||0,dur=player.getDuration()||0;
+    if(dur>0){document.getElementById('progress-fill').style.width=(cur/dur*100)+'%';document.getElementById('cur-time').textContent=fmt(cur);document.getElementById('dur-time').textContent=fmt(dur);}}
+    catch(e){}
+  },1000);
+}
+function stopProgressLoop(){if(progressLoop)clearInterval(progressLoop);}
+function seek(e){if(!player||!player.getDuration)return;try{const rect=e.currentTarget.getBoundingClientRect();const pct=(e.clientX-rect.left)/rect.width;player.seekTo(player.getDuration()*pct);}catch(e){}}
+function fmt(s){const m=Math.floor(s/60),sec=Math.floor(s%60);return m+':'+(sec<10?'0':'')+sec;}
+
+// ===================== ANTI-PAUSE =====================
+function startAntiPause() {
+  if(antiPauseLoop)clearInterval(antiPauseLoop);
+  antiPauseLoop=setInterval(()=>{
+    if(!player||!player.getPlayerState)return;
+    try{const s=player.getPlayerState(),cur=player.getCurrentTime()||0,dur=player.getDuration()||0;
+    if(s===YT.PlayerState.PAUSED && dur-cur>3){player.playVideo();console.log('Anti-pause');}}
+    catch(e){}
+  },30000);
+  setInterval(()=>{window.dispatchEvent(new Event('mousemove'));document.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));},300000);
+}
+
+// ===================== QUEUE UI =====================
+function renderQueue() {
+  const container=document.getElementById('queue-list');
+  document.getElementById('queue-count').textContent=playQueue.length;
+  if(playQueue.length===0){container.innerHTML='<div class="empty-state"><div class="big">🎵</div><p>คิวว่างเปล่า<br>พิมพ์ชื่อเพลงด้านบนแล้วกดค้นหา<br>ระบบจะเพิ่มเพลงที่เกี่ยวข้องเข้าคิวอัตโนมัติ</p></div>';return;}
+  container.innerHTML='';
+  playQueue.forEach((v,i)=>{
+    const div=document.createElement('div');div.className='video-item '+(i===currentIndex?'playing':'');
+    div.innerHTML=`<img class="video-thumb" src="${v.thumb}" loading="lazy" onerror="this.src='https://img.youtube.com/vi/${v.id}/mqdefault.jpg'"><div class="video-info"><div class="video-title">${v.title}</div><div class="video-meta">${v.channel||'YouTube'} ${v.duration?'<span class="dur">'+v.duration+'</span>':''}</div></div><button class="video-remove" onclick="event.stopPropagation();removeFromQueue(${i})">✕</button>`;
+    div.onclick=()=>playVideo(i);container.appendChild(div);
+  });
+}
+function renderHistory() {
+  const container=document.getElementById('history-list');
+  document.getElementById('history-count').textContent=playedHistory.length;
+  if(playedHistory.length===0){container.innerHTML='<div class="empty-state" style="padding:20px"><p style="font-size:12px">ยังไม่มีประวัติการเล่น</p></div>';return;}
+  container.innerHTML='';
+  playedHistory.slice(0,10).forEach(v=>{
+    const div=document.createElement('div');div.className='video-item';div.style.opacity='0.6';
+    div.innerHTML=`<img class="video-thumb" src="${v.thumb}" style="width:80px;height:45px"><div class="video-info"><div class="video-title" style="font-size:12px">${v.title}</div><div class="video-meta" style="font-size:10px">${v.channel||'YouTube'}</div></div>`;
+    container.appendChild(div);
+  });
+}
+function removeFromQueue(idx){if(idx===currentIndex){nextVideo();}playQueue.splice(idx,1);if(idx<currentIndex)currentIndex--;renderQueue();}
+function clearQueue(){if(!confirm('ล้างคิวเพลงทั้งหมด?'))return;playQueue=[];currentIndex=-1;renderQueue();showToast('🗑 ล้างคิวแล้ว');}
+
+// ===================== SETTINGS =====================
+function openSettings(){document.getElementById('settings-modal').classList.add('active');}
+function closeSettings(){document.getElementById('settings-modal').classList.remove('active');}
+function toggleSetting(key){settings[key]=!settings[key];localStorage.setItem('ytpro_settings',JSON.stringify(settings));updateSettingsUI();if(key==='antipause'){settings.antipause?startAntiPause():(antiPauseLoop&&clearInterval(antiPauseLoop));}showToast((settings[key]?'✅':'❌')+' '+key);}
+function updateSettingsUI(){Object.keys(settings).forEach(k=>{const el=document.getElementById('tog-'+k);if(el)el.classList.toggle('on',settings[k]);});}
+
+// ===================== API KEY =====================
+function toggleApiBanner(){document.getElementById('api-banner').classList.toggle('show');}
+function saveApiKey(){const key=document.getElementById('api-key-input').value.trim();if(!key){showToast('กรุณาใส่ API Key',true);return;}apiKey=key;localStorage.setItem('ytpro_apikey',key);showToast('✅ บันทึก API Key แล้ว');document.getElementById('api-banner').classList.remove('show');}
+function clearApiKey(){apiKey='';localStorage.removeItem('ytpro_apikey');document.getElementById('api-key-input').value='';showToast('🗑 ลบ API Key แล้ว');}
+
+// ===================== SLEEP TIMER =====================
+function openSleepModal(){document.getElementById('sleep-modal').classList.add('active');}
+function closeSleepModal(){document.getElementById('sleep-modal').classList.remove('active');}
+function setSleepTimer(min){if(sleepInterval)clearInterval(sleepInterval);if(sleepTimer)clearTimeout(sleepTimer);if(min===0){document.getElementById('sleep-chip').classList.remove('on');document.getElementById('sleep-chip').textContent='⏲️ Sleep';document.getElementById('sleep-display').textContent='--:--';closeSleepModal();showToast('⏲️ ปิด Sleep Timer');return;}let sec=min*60;document.getElementById('sleep-chip').classList.add('on');updateSleepDisplay(sec);closeSleepModal();showToast('⏲️ ตั้งเวลา '+min+' นาที');sleepInterval=setInterval(()=>{sec--;updateSleepDisplay(sec);if(sec<=0){clearInterval(sleepInterval);try{player.pauseVideo();}catch(e){}document.getElementById('sleep-chip').classList.remove('on');document.getElementById('sleep-chip').textContent='⏲️ Sleep';showToast('⏲️ หยุดเล่นตามเวลาที่ตั้งไว้');}},1000);}
+function updateSleepDisplay(sec){const m=Math.floor(sec/60),s=sec%60;const txt=m+':'+(s<10?'0':'')+s;document.getElementById('sleep-display').textContent=txt;document.getElementById('sleep-chip').textContent='⏲️ '+txt;}
+
+// ===================== UTILS =====================
+function updateStatus(text,type){
+  document.getElementById('status-text').textContent=text;
+  const dot=document.getElementById('status-dot');
+  dot.className='dot'+(type==='warn'?' warn':type==='err'?' err':'');
+}
+function showToast(msg,isError){const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(isError?' error':'')+' show';setTimeout(()=>t.classList.remove('show'),3000);}
+
+// ===================== KEYBOARD =====================
+document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.code==='Space'){e.preventDefault();togglePlay();}if(e.code==='ArrowRight')nextVideo();if(e.code==='ArrowLeft')prevVideo();});
+
+// ===================== INIT =====================
+updateSettingsUI();
+if('serviceWorker' in navigator){navigator.serviceWorker.register('data:text/javascript,'+encodeURIComponent(`self.addEventListener('install',e=>self.skipWaiting());self.addEventListener('activate',e=>e.waitUntil(clients.claim()));self.addEventListener('fetch',e=>e.respondWith(fetch(e.request).catch(()=>new Response('Offline'))));`)).catch(()=>{});}
+</script>
+</body>
+</html>
